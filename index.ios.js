@@ -17,41 +17,9 @@ var {
   View,
 } = ReactNative;
 
-var List = React.createClass({
-  render: function () {
-    return (
-      <View style = {styles.container}>
-        <Text>
-          页面
-        </Text>
-      </View>
-    )
-  }
-})
-
-var Edit = React.createClass({
-  render: function () {
-    return (
-      <View style = {styles.container}>
-        <Text>
-          编辑
-        </Text>
-      </View>
-    )
-  }
-})
-
-var Account = React.createClass({
-  render: function () {
-    return (
-      <View style = {styles.container}>
-        <Text>
-          账户
-        </Text>
-      </View>
-    )
-  }
-})
+var List = require('./app/creation/index')
+var Edit = require('./app/edit/index')
+var Account = require('./app/account/index')
 
 class Project extends React.Component {
   static title = '<TabBarIOS>';
