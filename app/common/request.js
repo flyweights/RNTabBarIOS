@@ -1,8 +1,8 @@
 'use strict'
 
-var queryString = require('query-string')
-var _ = require('lodash')
-var Mock = require('mockjs')
+var queryString = require('query-string')//字符串操作模块
+var _ = require('lodash')//工具库
+var Mock = require('mockjs')//模拟数据模块
 var config = require('./config')
 
 var request = {}
@@ -10,7 +10,7 @@ var request = {}
 request.get = function (url, params) {
   if (params) {
     url += '?' + queryString.stringify(params)
-    console.log('发送的url'+ url)
+    //console.log('发送的url'+ url)
   }
 
   return fetch(url)

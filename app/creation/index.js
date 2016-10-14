@@ -10,7 +10,9 @@ var {
   ListView,
   TouchableHighlight,
   Image,
-  Dimensions
+  Dimensions,
+  ActivityIndicatorIOS,
+  RefreshControl
 } = ReactNative;
 
 var request = require('../common/request')
@@ -18,25 +20,25 @@ var config = require('../common/config')
 
 var width = Dimensions.get('window').width
 
+var cachedResults = {
+  nextPage: 1,
+  items: [],
+  total: 0
+}
+
 var List = React.createClass({
 
   getInitialState: function () {
+
     var ds = new ListView.DataSource({rowHasChanged: (r1, r2) => r1 !== r2});
     return {
-      dataSource: ds.cloneWithRows([{
-        "_id": "140000198504171274",
-        "thumb": "http://dummyimage.com/1200x600/5f44b8)",
-        "video": "http://flyweights.top"
-      },
-        {
-          "_id": "530000201404204726",
-          "thumb": "http://dummyimage.com/1200x600/3c54ba)",
-          "video": "http://flyweights.top"
-        }]),
+      isLoadingTail: false,
+      isRefreshing: false,
+      dataSource: ds.cloneWithRows([]),
     };
   },
 
-  renderRow: function (rowData) {
+  _renderRow: function (rowData) {
     return (
       <TouchableHighlight>
         <View style={styles.item}>
@@ -76,26 +78,115 @@ var List = React.createClass({
   },
 
   componentDidMount: function () {
-    this._fetchData()
+    this._fetchData(1)
   },
 
+  _hasMore: function () {
+    return cachedResults.items.length !== cachedResults.total
+  },
 
-  _fetchData: function () {
+  _fetchData: function (page) {
+    var that = this
+
+    if (page !== 0){
+      this.setState({
+        isLoadingTail: true
+      })
+    }else{
+      this.setState({
+        isRefreshing: true
+      })
+    }
+
     request.get(config.api.base + config.api.creations,{
-      accessToken: 'ab1def'
+      accessToken: 'ab1def',
+      page: page
     })
       .then((data) => {
         if (data.success) {
-          this.setState({
-            dataSource: this.state.dataSource.cloneWithRows(data.data)
-          })
+          var items = cachedResults.items.slice()
+
+          if (page !== 0){
+            items = items.concat(data.data)
+            cachedResults.nextPage +=1
+          }else{
+            items = data.data.concat(items)
+          }
+
+          cachedResults.items = items
+          cachedResults.total = data.total
+
+          setTimeout(() => {
+            if (page !== 0){
+              this.setState({
+                isLoadingTail: false,
+                dataSource: this.state.dataSource.cloneWithRows(cachedResults.items)
+              })
+            }else{
+              this.setState({
+                isRefreshing: false,
+                dataSource: this.state.dataSource.cloneWithRows(cachedResults.items)
+              })
+            }
+          },200)
+
+          // setTimeout(function () {
+          //   this.setState({
+          //     isLoadingTail: false,
+          //     dataSource: this.state.dataSource.cloneWithRows(cachedResults.items)
+          //   })
+          // }.bind(this),2000)
+
         }
       })
       .catch((error)=> {
+
+        if (page !== 0){
+          this.setState({
+            isLoadingTail: false
+          })
+
+        }else{
+          this.setState({
+            isRefreshing: false
+          })
+        }
+
         console.warn(error)
       })
   },
 
+  _fetchMoreData:function () {
+    if (!this._hasMore() || this.state.isLoadingTail){
+      return
+    }
+
+    var page = cachedResults.nextPage
+    this._fetchData(page)
+  },
+
+  _onRefresh: function () {
+    if (!this._hasMore() || this.state.isRefreshing){
+      return
+    }
+    this._fetchData(0)
+  },
+
+  _renderFooter:function () {
+    if (!this._hasMore() && cachedResults.total !=0){
+      return (
+        <View style={styles.loadingMore}>
+          <Text style={styles.loadingText}>没有更多了</Text>
+        </View>
+      )
+    }
+
+    if (!this.state.isLoadingTail){
+      return <View style={styles.loadingMore}/>
+    }
+
+    return <ActivityIndicatorIOS style={styles.loadingMore}/>
+  },
 
   render: function () {
     return (
@@ -106,7 +197,24 @@ var List = React.createClass({
 
         <ListView
           dataSource={this.state.dataSource}
-          renderRow={this.renderRow}
+          renderRow={this._renderRow}
+
+          refreshControl={
+            <RefreshControl
+              refreshing={this.state.isRefreshing}
+              onRefresh={this._onRefresh}
+              tintColor='#ff6600'
+              title='拼命加载中'
+            />
+          }
+
+          renderFooter={this._renderFooter}
+
+          onEndReached={this._fetchMoreData}
+          onEndReachedThreshold={20}
+
+          enableEmptySections={true}
+          automaticallyAdjustContentInsets={false}
         />
       </View>
     )
@@ -191,7 +299,16 @@ var styles = StyleSheet.create({
   commentIcon: {
     fontSize: 22,
     color: '#333'
-  }
+  },
+
+  loadingMore: {
+    marginVertical:20
+  },
+
+  loadingText:{
+    color:'#777',
+    textAlign: 'center'
+}
 
 });
 
