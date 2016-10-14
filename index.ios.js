@@ -33,7 +33,8 @@ class Project extends React.Component {
   };
 
 //num 这里运来是 num？，不知道为什么这样写，没有找到原因
-  _renderContent = (color: string, pageText: string, num: number) => {
+//   _renderContent = (color: string, pageText: string, num: number) => {
+  _renderContent = (color, pageText, num) => {
     return (
       <View style={[styles.tabContent, {backgroundColor: color}]}>
         <Text style={styles.tabText}>{pageText}</Text>
